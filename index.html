@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>海戰棋 Battleship - GitHub 版</title>
+    <style>
+        :root {
+            --color-sea: #1e3799;
+            --color-ship: #4a69bd;
+            --color-hit: #eb2f06;
+            --color-miss: #78e08f;
+            --color-empty: #f1f2f6;
+        }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; flex-direction: column; align-items: center; background-color: #f0f2f5; margin-top: 50px; }
+        h1 { color: #2c3e50; }
+        .info { margin-bottom: 20px; text-align: center; }
+        /* 棋盤佈局 */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(10, 40px);
+            grid-template-rows: repeat(10, 40px);
+            gap: 2px;
+            background-color: #bdc3c7;
+            padding: 5px;
+            border-radius: 4px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        /* 格子樣式 */
+        .cell {
+            width: 40px;
+            height: 40px;
+            background-color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 12px;
+            transition: 0.2s;
+        }
+        .cell:hover { opacity: 0.8; }
+        /* 狀態對應顏色 */
+        .status-0 { background-color: white; }        /* 空海域 */
+        .status-1 { background-color: white; }        /* 有船(隱藏時為白色) */
+        .status-2 { background-color: var(--color-hit); color: white; }  /* 擊中 (X) */
+        .status-3 { background-color: var(--color-miss); color: white; } /* 沒中 (O) */
+        
+        .debug .status-1 { background-color: #a4b0be; } /* 除錯模式下顯示船隻 */
+        
+        .controls { margin-top: 20px; }
+        button { padding: 10px 20px; cursor: pointer; background-color: #2ecc71; border: none; color: white; border-radius: 5px; font-weight: bold; }
+        button:hover { background-color: #27ae60; }
+    </style>
+</head>
+<body>
+
+    <h1>海戰棋 Battleship</h1>
+    
+    <div class="info">
+        <p id="msg">目標：找出並擊沉所有敵艦！</p>
+        <p>狀態說明：<span style="color:red">紅色(X)</span> = 擊中 | <span style="color:green">綠色(O)</span> = 沒中</p>
+    </div>
+
+    <div id="board" class="grid"></div>
+
+    <div class="controls">
+        <button onclick="location.reload()">重新開始</button>
+    </div>
+
+    <script>
+        const SIZE = 10;
+        const shipsToPlace = [5, 4, 3, 3, 2]; // 定義不同長度的船
+        let boardData = []; // 二維陣列儲存 0, 1, 2, 3
+        let totalShipCells = 0;
+        let currentHits = 0;
+
+        // 初始化棋盤資料
+        function initBoard() {
+            boardData = Array(SIZE).fill().map(() => Array(SIZE).fill(0));
+            shipsToPlace.forEach(len => {
+                placeShip(len);
+                totalShipCells += len;
+            });
+            renderBoard();
+        }
+
+        // 隨機放置船隻 (狀態 1)
+        function placeShip(len) {
+            let placed = false;
+            while (!placed) {
+                let isVertical = Math.random() < 0.5;
+                let row = Math.floor(Math.random() * (isVertical ? SIZE - len : SIZE));
+                let col = Math.floor(Math.random() * (isVertical ? SIZE : SIZE - len));
+
+                let canPlace = true;
+                for (let i = 0; i < len; i++) {
+                    if (boardData[isVertical ? row + i : row][isVertical ? col : col + i] !== 0) {
+                        canPlace = false;
+                        break;
+                    }
+                }
+
+                if (canPlace) {
+                    for (let i = 0; i < len; i++) {
+                        boardData[isVertical ? row + i : row][isVertical ? col : col + i] = 1;
+                    }
+                    placed = true;
+                }
+            }
+        }
+
+        // 繪製棋盤到 HTML
+        function renderBoard() {
+            const boardEl = document.getElementById('board');
+            boardEl.innerHTML = '';
+            for (let r = 0; r < SIZE; r++) {
+                for (let c = 0; c < SIZE; c++) {
+                    const cell = document.createElement('div');
+                    const state = boardData[r][c];
+                    cell.className = `cell status-${state}`;
+                    
+                    if (state === 2) cell.innerText = 'X';
+                    if (state === 3) cell.innerText = 'O';
+
+                    cell.onclick = () => handleAttack(r, c);
+                    boardEl.appendChild(cell);
+                }
+            }
+        }
+
+        // 處理攻擊邏輯
+        function handleAttack(r, c) {
+            const state = boardData[r][c];
+            if (state === 2 || state === 3) return; // 重複點擊無效
+
+            if (state === 1) {
+                boardData[r][c] = 2; // 變更為擊中 (2)
+                currentHits++;
+                document.getElementById('msg').innerText = "💥 漂亮！擊中了！";
+            } else {
+                boardData[r][c] = 3; // 變更為沒中 (3)
+                document.getElementById('msg').innerText = "🌊 喔不，打到水裡了。";
+            }
+
+            if (currentHits === totalShipCells) {
+                document.getElementById('msg').innerText = "🏆 萬歲！你擊沉了所有敵艦！";
+            }
+            renderBoard();
+        }
+
+        initBoard();
+    </script>
+</body>
+</html>
